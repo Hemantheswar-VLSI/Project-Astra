@@ -1,0 +1,138 @@
+#include <Wire.h>
+#include "MAX30105.h"
+#include "spo2_algorithm.h"
+
+MAX30105 particleSensor;
+
+#define BUFFER_SIZE 100
+
+uint32_t irBuffer[BUFFER_SIZE];
+uint32_t redBuffer[BUFFER_SIZE];
+
+int32_t spo2;
+int8_t validSpO2;
+
+int32_t heartRate;
+int8_t validHeartRate;
+
+long irValue = 0;
+long redValue =0;
+
+void setup()
+
+
+
+{
+  Serial.begin(115200);
+  Wire.begin();
+
+  if (!particleSensor.begin(Wire))
+  {
+    Serial.println("Sensor not found");
+    while (1);
+  }
+ particleSensor.setup(
+  0x3F,   // LED brightness (medium)
+  8,      // 🔥 sample average = 8 (smooth signal)
+  2,      // LED mode (Red + IR)
+  50,     // 🔥 sampling rate = 50 Hz
+  411,    // pulse width (high accuracy)
+  16384   // ADC range (high sensitivity)
+);
+ 
+
+  Serial.println("Place finger...");
+}
+
+//SpO2 calling function
+int spo2_function(){
+   // Collect 100 samples
+for (int i = 0; i < BUFFER_SIZE; i++)
+  {
+    while (!particleSensor.available())
+      particleSensor.check();
+
+    redBuffer[i] = particleSensor.getRed();
+    irBuffer[i] = particleSensor.getIR();
+    particleSensor.nextSample();
+  }
+
+  maxim_heart_rate_and_oxygen_saturation(
+    irBuffer,
+    BUFFER_SIZE,
+    redBuffer,
+    &spo2,
+    &validSpO2,
+    &heartRate,
+    &validHeartRate
+  );
+irValue = particleSensor.getIR();
+ redValue = particleSensor.getRed();
+  if(irValue <40000 && redValue<40000){
+    return 2;
+  }
+ // Print only SpO2
+  if (validSpO2)
+  {
+    Serial.print("SpO2: ");
+    Serial.print(spo2);
+    Serial.println(" %");
+  }
+  return validSpO2;
+}
+void loop()
+{
+  irValue = particleSensor.getIR();
+  redValue = particleSensor.getRed();
+  Serial.println(irValue);
+  Serial.println(redValue);
+if(irValue >30000 && redValue>30000){
+  Serial.println("Finger Is placed : ");
+   Serial.println("Please wait  ");
+ int return_value=0;
+ while(return_value ==0){
+ return_value=spo2_function();
+}
+  if(return_value==2){
+    Serial.println("Finger removed fastly . Place finger again ");
+    delay(2000);
+    return;
+  }
+Serial.println("Please remove your finger ");
+do{
+  
+  irValue = particleSensor.getIR();
+  redValue = particleSensor.getRed();
+}
+while(irValue >40000 && redValue>40000);
+Serial.println("Thank You . Take care of your Health ");
+delay(2000);
+}
+else{
+  Serial.println("Place finger on the sensor Gently ");
+  do{
+  
+  irValue = particleSensor.getIR();
+  redValue = particleSensor.getRed();
+}
+while(irValue <50000 && redValue<50000);
+}
+ delay(1000);
+}
+command      - function of it
+-----main-------
+hello        - wake word
+voice mode   - voice mode
+gesture mode - gesture mode
+shutdown     - sleep mode again starts from hello
+shutdown completely - file closed again open to start
+----voice.py-------
+gesture mode - opening gesture mode
+exit or back - leaving voice mode returning to main file
+move forward - forward  movement 
+move backward- backward movement
+move right   - right movement
+move left    - left movement
+stop         - robot stoped
+remote mode  - enter into remote mode control goes to blynk
+
